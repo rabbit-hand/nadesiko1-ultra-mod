@@ -90,7 +90,8 @@ end;
 
 procedure TfrmFind.popPasteClick(Sender: TObject);
 begin
-  cmbFind.SelText := Clipboard.AsText;
+  // cmbFind.SelText := Clipboard.AsText;
+  cmbFind.Text := Clipboard.AsText;
 end;
 
 procedure TfrmFind.FormShow(Sender: TObject);
