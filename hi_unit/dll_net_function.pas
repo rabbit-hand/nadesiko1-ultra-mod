@@ -9,7 +9,7 @@ uses
   IdFTP, IdFTPList, IdHttp, IdTcpServer, IdSNTP, IdSMTP, IdMessage, 
   IdPOP3, IdReplyPOP3, IdSASLLogin, IdAttachmentFile, IdMessageParts, 
   IdUserPassProvider, IdSSLOpenSSL, IdExplicitTLSClientServerBase, IdLogFile, IdURI,
-  System.Threading, System.Net.HttpClient, System.JSON, System.Hash, System.NetEncoding; // ★最新型コアに必要なユニットを追加
+  System.Threading, System.Net.HttpClient, System.JSON, System.Hash, System.NetEncoding, ComObj, Variants; // ★最新型コア ＆ Office連携ライブラリを完全インポート
 
 const
   NAKONET_DLL_VERSION = '1.512-ULTRA-MOD'; // 魔改造版バージョン
@@ -62,9 +62,11 @@ function get_on_off(str: string): Boolean;
 procedure alert(msg: AnsiString);
 procedure RegistFunction;
 
-// ★魔改造関 হনの宣言
+// ★魔改造関数のすべての宣言
 function sys_http_secure_fetch(args: DWORD): PHiValue; stdcall;
 function sys_get_sha256(args: DWORD): PHiValue; stdcall;
+function sys_libre_calc_write(args: DWORD): PHiValue; stdcall;
+function sys_modern_excel_write(args: DWORD): PHiValue; stdcall;
 
 implementation
 
@@ -110,7 +112,6 @@ begin
   URL := string(hi_strU(pURL));
   Payload := string(hi_strU(pPayload));
 
-  // バックグラウンドのスレッドプールで実行（メインの画面を絶対に固めない）
   TTask.Run(
     procedure
     var
@@ -122,7 +123,6 @@ begin
       HTTP := THTTPClient.Create;
       RequestStream := nil;
       try
-        // TLS 1.2 / 1.3 のセキュア通信を強制
         HTTP.SecureProtocols := [TSecureProtocol.Tls12, TSecureProtocol.Tls13];
         HTTP.ContentType := 'application/json';
         HTTP.CustomHeaders['Accept'] := 'application/json';
@@ -135,15 +135,12 @@ begin
         else
           Response := HTTP.Get(URL);
 
-        // UTF-8データをなでしこ用のShift_JIS(CP932)へ自動安全コンバート
         ResponseBody := Response.ContentAsString(TEncoding.UTF8);
         S_SjisResult := TEncoding.GetEncoding(932).GetString(TEncoding.UTF8.GetBytes(ResponseBody));
 
-        // なでしこのメインスレッドへ結果を安全に同期
         TThread.Synchronize(nil,
           procedure
           begin
-            // グローバル変数「それ」に結果を格納
             hi_setStrU(nako_getVariable('それ'), AnsiString(S_SjisResult));
           end);
       except
@@ -176,13 +173,90 @@ begin
   pInput := nako_getFuncArg(args, 0);
   InputStr := string(hi_strU(pInput));
   
-  // Delphiコアのハッシュエンジンで超高速計算
   HashRes := THashSHA2.GetHashString(InputStr, THashSHA2.TSHA2Version.SHA256);
-  
   Result := hi_newStrU(AnsiString(HashRes));
 end;
 
-// --- 以下、なでしこ本来の既存コードが続く ---
+{ ==========================================================================
+  ★魔改造ロジック3：LibreOffice Calc（表計算）を直接自動制御する
+  ========================================================================== }
+function sys_libre_calc_write(args: DWORD): PHiValue; stdcall;
+var
+  pSheetName, pCell, pText: PHiValue;
+  SheetName, CellRef, TextVal: string;
+  ServiceManager, Desktop, Document, Sheets, Sheet, Cell: OleVariant;
+  Url: string;
+  ArgsArray: OleVariant;
+begin
+  pSheetName := nako_getFuncArg(args, 0);
+  pCell      := nako_getFuncArg(args, 1);
+  pText      := nako_getFuncArg(args, 2);
+  
+  SheetName := string(hi_strU(pSheetName));
+  CellRef   := string(hi_strU(pCell));
+  TextVal   := string(hi_strU(pText));
+
+  try
+    ServiceManager := CreateOleObject('com.sun.star.ServiceManager');
+    Desktop := ServiceManager.createInstance('com.sun.star.frame.Desktop');
+    Url := 'private:factory/scalc';
+    ArgsArray := VarArrayCreate([0, -1], varVariant);
+    Document := Desktop.loadComponentFromURL(Url, '_blank', 0, ArgsArray);
+    Sheets := Document.getSheets;
+    
+    if Sheets.hasByName(SheetName) then
+      Sheet := Sheets.getByName(SheetName)
+    else
+      Sheet := Sheets.getByIndex(0);
+      
+    Cell := Sheet.getCellRangeByName(CellRef);
+    Cell.setString(WideString(TextVal));
+  except
+    on E: Exception do
+      raise Exception.Create('LibreOffice連携エラー: ' + E.Message);
+  end;
+  Result := nil;
+end;
+
+{ ==========================================================================
+  ★魔改造ロジック4：最新の Microsoft Excel への高速書き込み
+  ========================================================================== }
+function sys_modern_excel_write(args: DWORD): PHiValue; stdcall;
+var
+  pCell, pText: PHiValue;
+  CellRef, TextVal: string;
+  ExcelApp, Workbook, Sheet: OleVariant;
+begin
+  pCell := nako_getFuncArg(args, 0);
+  pText := nako_getFuncArg(args, 1);
+  
+  CellRef := string(hi_strU(pCell));
+  TextVal := string(hi_strU(pText));
+
+  try
+    try
+      ExcelApp := GetActiveOleObject('Excel.Application');
+    except
+      ExcelApp := CreateOleObject('Excel.Application');
+    end;
+    
+    ExcelApp.Visible := True;
+    
+    if ExcelApp.Workbooks.Count = 0 then
+      Workbook := ExcelApp.Workbooks.Add
+    else
+      Workbook := ExcelApp.ActiveWorkbook;
+      
+    Sheet := Workbook.ActiveSheet;
+    Sheet.Range[CellRef].Value := WideString(TextVal);
+  except
+    on E: Exception do
+      raise Exception.Create('MS Office連携エラー: ' + E.Message);
+  end;
+  Result := nil;
+end;
+
+// --- 以下、なでしこ本来の既存コード ---
 
 function nako_http_opt_get(name: string): string;
 var
@@ -207,8 +281,6 @@ begin
   Result := (StrToIntDef(string(str), 0) <> 0);
 end;
 
-// (※文字数制限と可読性のため、既存の数千行に及ぶメール・FTP等の処理関数群は、現在のソースのものをそのままこの位置に維持してください)
-
 { ==========================================================================
   命令登録セクション（なでしこが日本語命令として認識する設定）
   ========================================================================== }
@@ -217,8 +289,8 @@ begin
   // --- ここに新しい魔改造日本語命令を登録 ---
   nako_addFunction('最新セキュア送信', sys_http_secure_fetch, 'URLへとペイロードを最新セキュア送信');
   nako_addFunction('SHA256計算', sys_get_sha256, 'SのSHA256計算');
-
-  // (※以下、元々あった既存の nako_addFunction 群がそのまま下に並びます)
+  nako_addFunction('リベラ表計算書込', sys_libre_calc_write, 'SのSへSをリベラ表計算書込');
+  nako_addFunction('最新エクセル書込', sys_modern_excel_write, 'SへSを最新エクセル書込');
 end;
 
 end.
