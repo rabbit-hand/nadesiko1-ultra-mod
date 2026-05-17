@@ -37,32 +37,31 @@ uses
   unit_content_type in 'hi_unit\unit_content_type.pas',
   unit_date in 'hi_unit\unit_date.pas',
   openssl in 'hi_unit\openssl.pas',
-  EasyMasks in 'hi_unit\EasyMasks.pas';
+  EasyMasks in 'hi_unit\EasyMasks.pas',
+  System.Threading, System.Net.HttpClient, System.JSON, System.Hash, System.NetEncoding, ComObj, Variants; // â˜…ã“ã“ã«é­”æ”¹é€ ã«å¿…è¦ãªæœ€æ–°ã‚³ã‚¢ãƒ©ã‚¤ãƒ–ãƒ©ãƒªç¾¤ã‚’å®Œå…¨èåˆï¼
 
 //------------------------------------------------------------------------------
 // Plug-in import function
 procedure ImportNakoFunction; stdcall;
-{
-var
-  ret: PHiValue;
-  s: string;
+{var ret: PHiValue; s: string;
 }
 begin
   RegistFunction;
-  {
-  if nako_evalEx('!unakonet.nakov‚ğæ‚è‚Ş', ret) = False then
+  {if nako_evalEx('!ã€Œnakonet.nakoã€ã‚’å–ã‚Šè¾¼ã‚€', ret) = False then
   begin
     SetLength(s, 2049);
-    nako_getError(PChar(s), 2048); s := string(PChar(s));
-    raise Exception.Create('unakonet.nakov‚Ìæ‚è‚İ‚É¸”s‚µ‚Ü‚µ‚½B' + s);
+    nako_getError(PChar(s), 2048);
+    s := string(PChar(s));
+    raise Exception.Create('ã€Œnakonet.nakoã€ã®å–ã‚Šè¾¼ã¿ã«å¤±æ•—ã—ã¾ã—ãŸã€‚' + s);
   end;
   }
 end;
 
 //------------------------------------------------------------------------------
-// ƒvƒ‰ƒOƒCƒ“‚Ìî•ñ
+// ãƒ—ãƒ©ã‚°ã‚¤ãƒ³ã®æƒ…å ±
 function PluginInfo(str: PChar; len: Integer): Integer; stdcall;
-const STR_INFO = 'ƒlƒbƒgƒ[ƒNˆ—ƒvƒ‰ƒOƒCƒ“ by ƒNƒWƒ‰”òsŠ÷';
+const
+  STR_INFO = 'ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯å‡¦ç†ãƒ—ãƒ©ã‚°ã‚¤ãƒ³ by ã‚¯ã‚¸ãƒ©é£›è¡Œæœºï¼ˆã‚¦ãƒ«ãƒˆãƒ©ãƒ¢ãƒƒãƒ‰æ‹¡å¼µç‰ˆï¼‰';
 begin
   Result := Length(STR_INFO);
   if (str <> nil)and(len > 0) then
@@ -73,18 +72,14 @@ end;
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-function PluginVersion: DWORD; stdcall;
-begin
-  Result := 2;
-end;
-function PluginRequire: DWORD; stdcall;
-begin
-  Result := 2;
-end;
+function PluginVersion: DWORD; stdcall; begin Result := 2; end;
+function PluginRequire: DWORD; stdcall; begin Result := 2; end;
+
 procedure PluginInit(Handle: DWORD); stdcall;
 begin
   dnako_import_initFunctions(Handle);
 end;
+
 function PluginFin: DWORD; stdcall;
 begin
   Result := 0;
@@ -97,8 +92,5 @@ exports
   PluginRequire,
   PluginInit;
 
-
 begin
 end.
-
-
