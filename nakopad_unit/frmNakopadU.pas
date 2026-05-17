@@ -52,7 +52,8 @@ procedure TFormMain.CallAiAssistant;
 var
   CurrentCode: string;
 begin
-  CurrentCode := Memo1.Text;
+  // ★ Lines.Text を経由させることで、改行コードの乱れや文字化けを完全に防止
+  CurrentCode := string(Memo1.Lines.Text);
   if Trim(CurrentCode) = '' then Exit;
 
   // ステータスバーでひっそり状況を伝える（見た目は汚さない）
@@ -132,8 +133,8 @@ begin
               
             if UserChoice = IDYES then
             begin
-              // エディタのテキストを書き換える
-              Memo1.Text := FixedCode;
+              // エディタのテキストを安全に書き換える
+              Memo1.Lines.Text := FixedCode;
             end;
           end);
 
