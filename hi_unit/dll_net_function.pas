@@ -62,7 +62,7 @@ function get_on_off(str: string): Boolean;
 procedure alert(msg: AnsiString);
 procedure RegistFunction;
 
-// ★魔改造関数の宣言
+// ★魔改造関 হনの宣言
 function sys_http_secure_fetch(args: DWORD): PHiValue; stdcall;
 function sys_get_sha256(args: DWORD): PHiValue; stdcall;
 
@@ -167,7 +167,7 @@ end;
 
 { ==========================================================================
   ★魔改造ロジック2：外部DLL不要のネイティブSHA-256ハッシュ計算
-  ========================================================================== }
+  ========================================================================= }
 function sys_get_sha256(args: DWORD): PHiValue; stdcall;
 var
   pInput: PHiValue;
@@ -182,7 +182,7 @@ begin
   Result := hi_newStrU(AnsiString(HashRes));
 end;
 
-// --- 以下、なでしこ本来の既存コードが続く（省略せずに維持されます） ---
+// --- 以下、なでしこ本来の既存コードが続く ---
 
 function nako_http_opt_get(name: string): string;
 var
