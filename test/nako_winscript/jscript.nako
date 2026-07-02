@@ -1,0 +1,36 @@
+# -------------------------------------------------
+# JScript 言語サポートのテスト
+# -------------------------------------------------
+●テスト_nako_winscript_jscript_1
+　　もし、OSバージョン＜５ならば、戻る
+　　### 基本
+　　Aとは変数
+　　R=「1+2*3」をJSCRIPTする
+　　Rと7でテスト実行
+　　### 無名関数のテスト
+　　R=『(function(){ return 123; }())』をJSCRIPTする
+　　Rと123でテスト実行
+
+●テスト_nako_winscript_jscript_2
+　　もし、OSバージョン＜５ならば、戻る
+　　### クラスプロパティのテスト
+　　『
+function MyTest() {
+  this.prop = "test";
+  return this;
+}
+
+var nakotest_a = new MyTest();
+nakotest_a.prop = 321;
+』をJSCRIPT
+　　### Prototype メソッドのテスト
+　　『nakotest_a.prop;』をJSCRIPTする。
+　　それと321でテスト実行
+　　『
+MyTest.prototype.method = function() {
+  return this.prop;
+};
+』をJSCRIPTする。
+　　『(new MyTest()).method();』をJSCRIPTする
+　　それと『test』でテスト実行
+
